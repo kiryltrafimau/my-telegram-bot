@@ -1,26 +1,30 @@
-from aiogram import Bot, Dispatcher, types
-from aiogram.utils import executor
+import asyncio
 import os
-
-from dotenv import load_dotenv
-load_dotenv()  # загружаем переменные из .env
+from aiogram import Bot, Dispatcher, types
+from aiogram.filters import Command
 
 TOKEN = os.getenv("TELEGRAM_TOKEN")
-admins = os.getenv("ADMIN_IDS")  # например: "123456789,987654321"
+admins = os.getenv("ADMIN_IDS")
+admin_ids = [int(id.strip()) for id in admins.split(',')]
 
 bot = Bot(token=TOKEN)
-dp = Dispatcher(bot)
+dp = Dispatcher()
 
-@dp.message_handler(commands=['start'])
+@dp.message(Command("start"))
 async def start_handler(message: types.Message):
-    await message.answer("Привет! Ответь на вопрос: Почему хочешь в этот чат?")
+    await message.answer("Привет! Отправь мне сообщение, и я перешлю его админам.")
 
-@dp.message_handler()
-async def answer_handler(message: types.Message):
-    admin_ids = [int(id.strip()) for id in admins.split(',')]  # преобразуем строку в список чисел
+@dp.message()
+async def forward_to_admins(message: types.Message):
     for admin_id in admin_ids:
-        await bot.send_message(admin_id, f"Ответ от {message.from_user.full_name}: {message.text}")
-    await message.answer("Спасибо, ваш ответ отправлен администраторам!")
+        await bot.send_message(
+            admin_id,
+            f"Сообщение от пользователя {message.from_user.id} (@{message.from_user.username}):\n\n{message.text}"
+        )
+    await message.answer("Ваше сообщение отправлено администраторам!")
+
+async def main():
+    await dp.start_polling(bot)
 
 if __name__ == '__main__':
-    executor.start_polling(dp)
+    asyncio.run(main())
