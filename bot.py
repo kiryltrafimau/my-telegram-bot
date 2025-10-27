@@ -1,5 +1,6 @@
 import asyncio
 import os
+from aiohttp import web
 from aiogram import Bot, Dispatcher, types, F
 from aiogram.filters import Command, ChatMemberUpdatedFilter, JOIN_TRANSITION
 
@@ -10,16 +11,17 @@ admin_ids = [int(id.strip()) for id in admins.split(',')]
 bot = Bot(token=TOKEN)
 dp = Dispatcher()
 
+# HTTP endpoint для Render
+async def health(request):
+    return web.Response(text="Bot is running!")
+
 @dp.message(Command("start"))
 async def start_handler(message: types.Message):
     await message.answer('Привет! Это контроль спама. Зачем вам нужен чат "ИП: Беременность и декрет в Польше"? Напишите ваше сообщение, и я передам его администраторам.')
 
 @dp.chat_member(ChatMemberUpdatedFilter(member_status_changed=JOIN_TRANSITION))
 async def on_user_join(event: types.ChatMemberUpdated):
-    """Когда пользователь пытается присоединиться к чату"""
     user = event.new_chat_member.user
-    
-    # Отправляем сообщение пользователю в личку
     try:
         await bot.send_message(
             user.id,
@@ -28,7 +30,6 @@ async def on_user_join(event: types.ChatMemberUpdated):
     except Exception as e:
         print(f"Не удалось отправить сообщение пользователю {user.id}: {e}")
     
-    # Уведомляем админов о новом пользователе
     for admin_id in admin_ids:
         await bot.send_message(
             admin_id,
@@ -40,7 +41,6 @@ async def on_user_join(event: types.ChatMemberUpdated):
 
 @dp.message()
 async def forward_to_admins(message: types.Message):
-    """Обработка личных сообщений боту"""
     if message.chat.type == "private":
         for admin_id in admin_ids:
             await bot.send_message(
@@ -53,8 +53,22 @@ async def forward_to_admins(message: types.Message):
             )
         await message.answer("Спасибо! Ваше сообщение передано администраторам. Мы свяжемся с вами в ближайшее время.")
 
-async def main():
+async def start_bot():
     await dp.start_polling(bot, allowed_updates=["message", "chat_member"])
+
+async def start_web():
+    app = web.Application()
+    app.router.add_get('/', health)
+    runner = web.AppRunner(app)
+    await runner.setup()
+    site = web.TCPSite(runner, '0.0.0.0', int(os.getenv('PORT', 10000)))
+    await site.start()
+
+async def main():
+    await asyncio.gather(
+        start_bot(),
+        start_web()
+    )
 
 if __name__ == '__main__':
     asyncio.run(main())
