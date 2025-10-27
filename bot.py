@@ -12,7 +12,7 @@ dp = Dispatcher()
 
 @dp.message(Command("start"))
 async def start_handler(message: types.Message):
-    await message.answer("Привет! Это контроль спама. Зачем вам нужен чат "ИП: Беременность и декрет в Польше"? Напишите ваше сообщение, и я передам его администраторам.")
+    await message.answer('Привет! Это контроль спама. Зачем вам нужен чат "ИП: Беременность и декрет в Польше"? Напишите ваше сообщение, и я передам его администраторам.')
 
 @dp.chat_member(ChatMemberUpdatedFilter(member_status_changed=JOIN_TRANSITION))
 async def on_user_join(event: types.ChatMemberUpdated):
@@ -23,7 +23,7 @@ async def on_user_join(event: types.ChatMemberUpdated):
     try:
         await bot.send_message(
             user.id,
-            "Привет! Зачем вам этот чат? Напишите ваше сообщение, и я передам его администраторам."
+            'Привет! Это контроль спама. Зачем вам нужен чат "ИП: Беременность и декрет в Польше"? Напишите ваше сообщение, и я передам его администраторам.'
         )
     except Exception as e:
         print(f"Не удалось отправить сообщение пользователю {user.id}: {e}")
@@ -54,9 +54,7 @@ async def forward_to_admins(message: types.Message):
         await message.answer("Спасибо! Ваше сообщение передано администраторам. Мы свяжемся с вами в ближайшее время.")
 
 async def main():
-    # Важно: включаем обработку chat_member обновлений
     await dp.start_polling(bot, allowed_updates=["message", "chat_member"])
 
 if __name__ == '__main__':
     asyncio.run(main())
-
