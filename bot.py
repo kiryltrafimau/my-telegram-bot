@@ -12,16 +12,25 @@ dp = Dispatcher()
 
 @dp.message(Command("start"))
 async def start_handler(message: types.Message):
-    await message.answer("Привет! Отправь мне сообщение, и я перешлю его админам.")
+    await message.answer("Привет! Зачем вам этот чат? Напишите ваше сообщение, и я передам его администраторам.")
 
 @dp.message()
 async def forward_to_admins(message: types.Message):
-    for admin_id in admin_ids:
-        await bot.send_message(
-            admin_id,
-            f"Сообщение от пользователя {message.from_user.id} (@{message.from_user.username}):\n\n{message.text}"
-        )
-    await message.answer("Ваше сообщение отправлено администраторам!")
+    # Отправляем сообщение только в личку пользователю
+    if message.chat.type == "private":
+        for admin_id in admin_ids:
+            await bot.send_message(
+                admin_id,
+                f"Новое сообщение от пользователя:\n\n"
+                f"ID: {message.from_user.id}\n"
+                f"Имя: {message.from_user.full_name}\n"
+                f"Username: @{message.from_user.username if message.from_user.username else 'не указан'}\n\n"
+                f"Текст сообщения:\n{message.text}"
+            )
+        await message.answer("Спасибо! Ваше сообщение передано администраторам. Мы свяжемся с вами в ближайшее время.")
+    # Если сообщение из группы/чата - игнорируем
+    else:
+        pass
 
 async def main():
     await dp.start_polling(bot)
