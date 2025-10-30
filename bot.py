@@ -1,5 +1,6 @@
 import asyncio
 import os
+import signal
 from aiohttp import web
 from aiogram import Bot, Dispatcher, types
 from aiogram.filters import Command
@@ -11,36 +12,29 @@ admin_ids = [int(id.strip()) for id in admins.split(',')]
 bot = Bot(token=TOKEN)
 dp = Dispatcher()
 
-# HTTP endpoint для Render
 async def health(request):
     return web.Response(text="Bot is running!")
 
 @dp.message(Command("start"))
 async def start_handler(message: types.Message):
-    await message.answer('Привет! Это контроль спама. Зачем вам нужен чат "ИП: Беременность и декрет в Польше"? Напишите ваше сообщение, и я передам его администраторам.')
+    await message.answer(
+        'Привет! Это контроль спама. Зачем вам нужен чат "ИП: Беременность и декрет в Польше"? '
+        'Напишите ваше сообщение, и я передам его администраторам.'
+    )
 
 @dp.chat_join_request()
 async def on_join_request(chat_join_request: types.ChatJoinRequest):
-    """Когда пользователь ЗАПРАШИВАЕТ вступление в чат (до одобрения)"""
     user = chat_join_request.from_user
-    
-    # Отправляем сообщение пользователю в личку
-    try:
-        await bot.send_message(
-            user.id,
-            'Привет! Это контроль спама. Зачем вам нужен чат "ИП: Беременность и декрет в Польше"? Напишите ваше сообщение, и я передам его администраторам.'
-        )
-    except Exception as e:
-        print(f"Не удалось отправить сообщение пользователю {user.id}: {e}")
-    
-    # Уведомляем админов о новом запросе
+    join_link = f"https://t.me/{(await bot.get_me()).username}"
+
     for admin_id in admin_ids:
         await bot.send_message(
             admin_id,
             f"Новый пользователь запросил вступление в чат:\n\n"
             f"ID: {user.id}\n"
             f"Имя: {user.full_name}\n"
-            f"Username: @{user.username if user.username else 'не указан'}"
+            f"Username: @{user.username if user.username else 'не указан'}\n\n"
+            f"Попросите пользователя перейти по ссылке и написать боту чтобы активировать чат:\n{join_link}"
         )
 
 @dp.message()
@@ -69,7 +63,9 @@ async def start_web():
     await site.start()
 
 async def main():
-    await asyncio.gather(start_bot(), start_web())
+    # Обработчик SIGTERM
+    loop = asyncio.get_running_loop()
+    stop_event = asyncio.Event()
 
-if __name__ == '__main__':
-    asyncio.run(main())
+    def signal_handler():
+        print("Получ
