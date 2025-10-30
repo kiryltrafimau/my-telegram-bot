@@ -68,4 +68,18 @@ async def main():
     stop_event = asyncio.Event()
 
     def signal_handler():
-        print("Получ
+        print("Получен SIGTERM, завершение работы...")
+        stop_event.set()
+
+    loop.add_signal_handler(signal.SIGTERM, signal_handler)
+
+    await asyncio.gather(
+        start_bot(),
+        start_web(),
+        stop_event.wait()
+    )
+    # Корректное завершение
+    await bot.session.close()
+
+if __name__ == '__main__':
+    asyncio.run(main())
